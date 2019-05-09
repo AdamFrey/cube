@@ -1,0 +1,5 @@
+* Service
+** Development
+- Jack in with aliases ~-A:log:dev~
+* mtgjson
+
