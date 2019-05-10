@@ -24,6 +24,7 @@
   :dev {:extra-paths ["dev"]
         :extra-deps {io.pedestal/pedestal.service-tools {:mvn/version "0.5.5"}
                      io.pedestal/pedestal.jetty {:mvn/version "0.5.5"}
+                     juxt/crux {:mvn/version "19.04-1.0.3-alpha"}
                      ;;com.datomic/client-cloud {:mvn/version "0.8.71"}
                      #_#_com.datomic/ion-dev {:mvn/version "0.9.186"
                                               :exclusions [org.slf4j/slf4j-nop]}}}}}
