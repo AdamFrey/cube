@@ -1,4 +1,4 @@
-(ns cube.server
+(ns cube.dev.server
   (:require [cube.service :as service]
             [io.pedestal.http :as server]
             [io.pedestal.http.route :as route]))
