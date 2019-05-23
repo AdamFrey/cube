@@ -1,7 +1,8 @@
 (ns cube.data.mtgjson
   (:require [clojure.spec.alpha :as s]
             [jsonista.core :as json]
-            [mtg.card :as card]))
+            [mtg.card :as card]
+            [clojure.string :as str]))
 
 (s/check-asserts true)
 
@@ -34,13 +35,39 @@
       {}
       mana-symbols)))
 
-
 (defn card-to-remove?
   "Remove the insanity"
   [mtgjson-card]
   (let [is-whole-number? (fn [x]
                            (zero? (- x (int x))))]
-    (or (not (is-whole-number? (:convertedManaCost mtgjson-card))))))
+    (or (not (is-whole-number? (:convertedManaCost mtgjson-card)))
+        (= (:uuid mtgjson-card) "e53ae7f3-a0c0-5fb8-8753-c4917ab3a47b") ;; B.F.M 1
+        (= (:uuid mtgjson-card) "519ac397-e624-5cfc-bad6-0687b8a52777") ;; B.F.M 2
+        (#{["instant"] ;; capital offence
+           ["Card"] ;; championship
+           ["Eaturecray"] ;; Atinlay Igpay
+           }
+          (:types mtgjson-card)))))
+
+(defn power-and-toughness-attrs [card]
+  (let [safe-read         (fn [s]
+                            (try (read-string s)
+                                 (catch Exception e
+                                   nil)))
+        display-power     (:power card)
+        display-toughness (:toughness card)
+        power             (some-> display-power safe-read)
+        toughness         (some-> display-toughness safe-read)]
+    (cond-> {}
+      display-power                       (assoc ::card/display-power display-power)
+      display-toughness                   (assoc ::card/display-toughness display-toughness)
+      (= (type power) java.lang.Long)     (assoc ::card/power power)
+      (= (type toughness) java.lang.Long) (assoc ::card/toughness toughness))))
+
+(defn type-attrs [card]
+  {::card/types      (into #{} (map #(keyword "mtg.card.type" %)) (:types card))
+   ::card/supertypes (into #{} (map #(keyword "mtg.card.supertype" %)) (:supertypes card))
+   ::card/subtypes   (into #{} (map #(keyword "mtg.card.subtype" %)) (:subtypes card))})
 
 (defn all-cards-data
   ([] (all-cards-data (all-cards-json)))
@@ -50,34 +77,47 @@
        (if (card-to-remove? card)
          acc
          (let [card-name (:name card)
-               card-data {::card/name                card-name
-                          ::card/color-identity      (into #{} (map mtgjson->color*) (:colorIdentity card))
-                          ::card/colors              (into #{} (map mtgjson->color*) (:colors card))
-                          ::card/converted-mana-cost (int (:convertedManaCost card))
-                          ::card/layout              (keyword "mtg.card.layout" (:layout card))
-                          ::card/mana-cost           (mtgjson->mana-cost (:manaCost card))}]
+               card-data (-> {::card/name                card-name
+                              ::card/color-identity      (into #{} (map mtgjson->color*) (:colorIdentity card))
+                              ::card/colors              (into #{} (map mtgjson->color*) (:colors card))
+                              ::card/converted-mana-cost (int (:convertedManaCost card))
+                              ::card/layout              (keyword "mtg.card.layout" (:layout card))
+                              ::card/mana-cost           (mtgjson->mana-cost (:manaCost card))
+                              :scryfall/oracle-id        (:scryfallOracleId card)
+                              :mtgjson/id                (:uuid card)}
+                           (merge
+                             (power-and-toughness-attrs card)
+                             (type-attrs card)))]
            (s/assert :mtg/card card-data)
            (assoc acc card-name card-data))))
      {}
      json-data)))
 
 (comment
+  ;; Parsing
   (def all-json (all-cards-json))
 
   (def all-data (all-cards-data all-json))
   (take 50 all-data)
 
+  )
+
+(comment
+
+  (filter #(and (:name %) (str/includes? (:name %) "Furry")) (vals all-json))
+
   (map mtgjson->mana-cost
     (map :manaCost
       (take 100 (vals all-json))))
 
+  (def all-valid-cards
+    (remove card-to-remove? (vals all-json)))
 
-  (into #{} (map :power) (vals all-json)) ;; TODO
+  (filter #(= (:types %) ["Card"]) (vals all-json))
 
-  (filter #(= (:power %) "99") (vals all-json))
-
-  (get all-json (keyword "Spatial Contortion")) ;; Colorless
-  (filter card-to-remove? (vals all-json))
+  (into #{} (mapcat :types) all-valid-cards)
+  (into #{} (mapcat :supertypes) all-valid-cards)
+  (into #{} (mapcat :subtypes) all-valid-cards)
   )
 
 #_{:colorIdentity     ["B"],

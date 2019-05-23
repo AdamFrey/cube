@@ -1,0 +1,2 @@
+* 5-23-19
+- Finished basics for mtgjson->clj import with specs

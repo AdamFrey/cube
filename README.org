@@ -5,4 +5,5 @@
 * MTG Oddities
 - [[https://scryfall.com/card/unh/16/little-girl][Little Girl]] (fractional mana)
 - [[https://scryfall.com/search?q=layout%253Aaugment][Augment cards]]
+- Scheme Cards
 
